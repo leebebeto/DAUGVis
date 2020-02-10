@@ -14,10 +14,10 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import os
 import matplotlib
+import pickle
 
-
-color_classes = {0: [255, 0, 0], 1: [232, 235, 52], 2: [235, 150, 52], 3: [180, 255, 0], 4: [150, 75, 0], 5: [0, 180, 255], 6: [0,0,255], 7: [0, 0, 0], 8: [252, 0, 194], 9: [180, 180, 180]}
-
+color_classes = {0: [255, 0, 0], 1: [232, 235, 52], 2: [235, 150, 52], 3: [180, 255, 0], 4: [0, 0, 255], 5: [0, 180, 255], 6: [0,0,255], 7: [255, 0, 0], 8: [252, 0, 194], 9: [180, 180, 180]}
+#color_classes = {0: [255, 0, 0], 1: [232, 235, 52], 2: [235, 150, 52], 3: [180, 255, 0], 4: [150, 75, 0], 5: [0, 180, 255], 6: [0,0,255], 7: [0, 0, 0], 8: [252, 0, 194], 9: [180, 180, 180]}
 #color_classes = {0: [0, 0, 0], 1: [255, 0, 0], 2: [0, 255, 0], 3: [0, 0, 255]}
 
 ## test_image부터 시도
@@ -70,7 +70,6 @@ def preprocess_1b(real_images, labels):
 
 def preprocess_color(real_image, labels):
 	colored_image = real_image.cpu().numpy()
-	labels = labels.cpu().numpy()
 	colored_image = np.repeat(colored_image, 3, axis = 1)
 	plot_list = []
 	noise_list = []	
@@ -79,7 +78,11 @@ def preprocess_color(real_image, labels):
 		for i in range(3):
 			channel = colored_image[index, i, :, :]
 			mask_x, mask_y = np.where(channel == 0)
-			colored_image[index,i][mask_x, mask_y] =  color_classes[int(labels[index])][i] / 255
+			if type(labels) == int:
+				color = color_classes[labels][i]
+			else:
+				color = color_classes[labels[index].item()][i]
+			colored_image[index,i][mask_x, mask_y] =  color / 255
 			result = colored_image[index]
 		plot_list.append(result)
 	save_image(torch.tensor(plot_list), 'sample_image/result1.png', nrow= 8)
@@ -125,17 +128,29 @@ def add_random_color(real_image, labels):
 
 
 def label2vec(labels):
-	result = torch.zeros(labels.shape[0], 10).float()
+	result = torch.zeros(labels.shape[0], 2).float()
 	for i in range(result.shape[0]):
-		result[i][labels[i].item()] = 1.0
+		if labels[i].item() == 4:
+			result[i][0] = 1.0
+		elif labels[i].item() == 7:
+			result[i][1] = 1.0
+		else:
+			print('unknown number')
+			exit(0)
 	
 	return result
 
+def class2image(number):
+	with open('dataset/'+str(number)+'.pickle', 'rb') as file:
+		data = pickle.load(file)
+	return data
+
+
 def color2vec(labels):
-	result = torch.zeros(labels.shape[0], 10).float()
+	result = torch.zeros(labels.shape[0], 2).float()
 	
 	for i in range(result.shape[0]):
-		result[i][(labels[i].item()+ 3) % 10] = 1.0
+		result[i][(labels[i].item()+ 1) % 2] = 1.0
 	
 	return result
 
