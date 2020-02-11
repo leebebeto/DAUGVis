@@ -64,11 +64,11 @@ discriminator.train()
 for epoch in range(args.epoch):
 	for i, (images, labels) in enumerate(train_loader):
 		labels = labels.to(device)
-
+		real_images = images.to(device)
 		condition = label2vec(labels).to(device)
 		color = color2vec(labels).to(device)
 		
-		real_images = preprocess_color(images, labels)
+		# real_images = preprocess_color(images, labels)
 		random_vector = torch.randn(real_images.shape[0],args.latent_vector).to(device)
 		if real_images.shape[0] < args.batch_size: break 
 		
@@ -94,8 +94,8 @@ for epoch in range(args.epoch):
 		# train generator
 		g_loss_adv = criterion_gan(fake_valid, valid(fake_valid).to(device))
 		g_loss_cls = criterion_cls(fake_cls, labels)
-		g_loss = g_loss_adv + g_loss_cls
-		#g_recon_loss = criterion_recon(generated_image, real_images)
+		g_recon_loss = criterion_recon(generated_image, real_images)
+		g_loss = g_loss_adv + g_loss_cls + 0.25 * g_recon_loss
 		
 #		g_loss = g_gan_loss + 5 * g_recon_loss
 		g_optimizer.zero_grad()
@@ -109,17 +109,17 @@ for epoch in range(args.epoch):
 			print('Epoch [{}/{}], Step [{}/{}], Loss:{:.4f}, G-Loss: {:.4f}, D-Loss: {:.4f} '.format(epoch+1, args.epoch, i, int(len(train_loader)), loss.item(), g_loss, d_loss))
 		if i % 50 == 0:
 			plot_list = []
-			for iter in range(real_images.shape[0]):
+			for iter in range(16):
 				if iter > 32: break
 				test = generated_image[iter]
 				test = test.view(3,28,28)
 				npimg = test.detach().numpy()
 #				npimg = test.detach().cpu().numpy()
 				plot_list.append(npimg)
-			save_image(torch.tensor(plot_list), 'generated-images/'+str(epoch+1)+'-'+str(i)+'.png', nrow=2)
-	# if epoch % 50 == 0:
-	# 	torch.save(generator.state_dict(), 'check_point/generator_'+str(epoch)+'.pt')
-	# 	torch.save(discriminator.state_dict(), 'check_point/discriminator.pt')
+			save_image(torch.tensor(plot_list), 'generated-images/'+str(epoch+1)+'-'+str(i)+'.png', nrow=4)
+	if epoch % 10 == 0:
+		torch.save(generator.state_dict(), 'check_point/generator_'+str(epoch)+'.pt')
+		torch.save(discriminator.state_dict(), 'check_point/discriminator.pt')
 
 		
 
